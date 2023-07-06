@@ -4,6 +4,9 @@ import time
 
 import torch
 import transformers
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+import bitsandbytes as bnb
+from peft import PeftModel
 
 from modules import shared, generation_parameters_copypaste
 
@@ -85,6 +88,7 @@ def model_selection_changed(model_name):
 
 
 def generate(id_task, model_name, batch_count, batch_size, text, *args):
+    model_name = 'danbooru-llama-qlora'
     shared.state.textinfo = "Loading model..."
     shared.state.job_count = batch_count
 
@@ -94,9 +98,58 @@ def generate(id_task, model_name, batch_count, batch_size, text, *args):
         current.name = None
 
         if model_name != 'None':
-            path = get_model_path(model_name)
-            current.tokenizer = transformers.AutoTokenizer.from_pretrained(path)
-            current.model = transformers.AutoModelForCausalLM.from_pretrained(path)
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.bfloat16
+            )
+            model = AutoModelForCausalLM.from_pretrained("pinkmanlove/llama-7b-hf", quantization_config=bnb_config, device_map={"":0})
+            
+            model = PeftModel.from_pretrained(model, 'qwopqwop/danbooru-llama-qlora')
+            
+            model.eval()
+            model.bfloat16()
+            model.config.use_cache = True  # silence the warnings. Please re-enable for inference!
+            current.model = model
+
+            DEFAULT_PAD_TOKEN = "[PAD]"
+            
+            tokenizer = AutoTokenizer.from_pretrained("pinkmanlove/llama-7b-hf", use_fast=False)
+            
+            def smart_tokenizer_and_embedding_resize(
+                special_tokens_dict,
+                tokenizer,
+                model,
+            ):
+                """Resize tokenizer and embedding.
+            
+                Note: This is the unoptimized version that may make your embedding size not be divisible by 64.
+                """
+                num_new_tokens = tokenizer.add_special_tokens(special_tokens_dict)
+                model.resize_token_embeddings(len(tokenizer))
+            
+                if num_new_tokens > 0:
+                    input_embeddings = model.get_input_embeddings().weight.data
+                    output_embeddings = model.get_output_embeddings().weight.data
+            
+                    input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
+                    output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
+            
+                    input_embeddings[-num_new_tokens:] = input_embeddings_avg
+                    output_embeddings[-num_new_tokens:] = output_embeddings_avg
+            
+            if tokenizer._pad_token is None:
+                smart_tokenizer_and_embedding_resize(
+                    special_tokens_dict=dict(pad_token=DEFAULT_PAD_TOKEN),
+                    tokenizer=tokenizer,
+                    model=model)
+            
+            tokenizer.add_special_tokens({"eos_token": tokenizer.convert_ids_to_tokens(model.config.eos_token_id),
+                                          "bos_token": tokenizer.convert_ids_to_tokens(model.config.bos_token_id),
+                                          "unk_token": tokenizer.convert_ids_to_tokens(model.config.pad_token_id if model.config.pad_token_id != -1 else tokenizer.pad_token_id),})
+            
+            current.tokenizer = tokenizer
             current.name = model_name
 
     assert current.model, 'No model available'
@@ -229,8 +282,8 @@ def add_tab():
 def on_ui_settings():
     section = ("promptgen", "Promptgen")
 
-    shared.opts.add_option("promptgen_names", shared.OptionInfo("AUTOMATIC/promptgen-lexart, AUTOMATIC/promptgen-majinai-safe, AUTOMATIC/promptgen-majinai-unsafe", "Hugginface model names for promptgen, separated by comma", section=section))
-    shared.opts.add_option("promptgen_device", shared.OptionInfo("gpu", "Device to use for text generation", gr.Radio, {"choices": ["gpu", "cpu"]}, section=section))
+    shared.opts.add_option("promptgen_names", shared.OptionInfo("qwopqwop/danbooru-llama-qlora", section=section))
+    shared.opts.add_option("promptgen_device", shared.OptionInfo("gpu", "Device to use for text generation", gr.Radio, {"choices": ["gpu"]}, section=section))
 
 
 def on_unload():

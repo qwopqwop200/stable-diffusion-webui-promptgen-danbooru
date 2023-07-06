@@ -4,7 +4,7 @@ import time
 
 import torch
 import transformers
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import bitsandbytes as bnb
 from peft import PeftModel
 
@@ -98,15 +98,10 @@ def generate(id_task, model_name, batch_count, batch_size, text, *args):
         current.name = None
 
         if model_name != 'None':
-            bnb_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16
-            )
-            model = AutoModelForCausalLM.from_pretrained("pinkmanlove/llama-7b-hf", quantization_config=bnb_config, device_map={"":0})
+            model = AutoModelForCausalLM.from_pretrained("pinkmanlove/llama-7b-hf", device_map={"":0})
             
             model = PeftModel.from_pretrained(model, 'qwopqwop/danbooru-llama-qlora')
+            model = model.merge_and_unload()
             
             model.eval()
             model.bfloat16()

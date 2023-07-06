@@ -97,7 +97,7 @@ def generate(id_task, model_name, batch_count, batch_size, text, *args):
         current.name = None
 
         if model_name != 'None':
-            model = AutoGPTQForCausalLM.from_quantized("qwopqwop/danbooru-llama-gptq")
+            model = AutoGPTQForCausalLM.from_quantized("qwopqwop/danbooru-llama-gptq").model
             current.model = model
 
             DEFAULT_PAD_TOKEN = "[PAD]"

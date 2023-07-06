@@ -5,7 +5,6 @@ import time
 import torch
 import transformers
 from transformers import AutoTokenizer, AutoModelForCausalLM
-import bitsandbytes as bnb
 from peft import PeftModel
 
 from modules import shared, generation_parameters_copypaste
@@ -278,8 +277,7 @@ def on_ui_settings():
     section = ("promptgen", "Promptgen")
 
     shared.opts.add_option("promptgen_names", shared.OptionInfo("qwopqwop/danbooru-llama-qlora", section=section))
-    shared.opts.add_option("promptgen_device", shared.OptionInfo("gpu", "Device to use for text generation", gr.Radio, {"choices": ["gpu"]}, section=section))
-
+    shared.opts.add_option("promptgen_device", shared.OptionInfo("gpu", "Device to use for text generation", gr.Radio, {"choices": ["gpu", "cpu"]}, section=section))
 
 def on_unload():
     current.model = None

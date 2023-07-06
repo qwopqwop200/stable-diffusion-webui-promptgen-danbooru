@@ -87,7 +87,7 @@ def model_selection_changed(model_name):
 
 
 def generate(id_task, model_name, batch_count, batch_size, text, *args):
-    model_name = 'danbooru-llama-qlora'
+    model_name = 'danbooru-llama-gptq'
     shared.state.textinfo = "Loading model..."
     shared.state.job_count = batch_count
 
@@ -269,8 +269,8 @@ def add_tab():
 def on_ui_settings():
     section = ("promptgen", "Promptgen")
 
-    shared.opts.add_option("promptgen_names", shared.OptionInfo("qwopqwop/danbooru-llama-qlora", section=section))
-    shared.opts.add_option("promptgen_device", shared.OptionInfo("gpu", "Device to use for text generation", gr.Radio, {"choices": ["gpu", "cpu"]}, section=section))
+    shared.opts.add_option("promptgen_names", shared.OptionInfo("qwopqwop/danbooru-llama-gptq", section=section))
+    shared.opts.add_option("promptgen_device", shared.OptionInfo("gpu", "Device to use for text generation", gr.Radio, {"choices": ["gpu"]}, section=section))
 
 def on_unload():
     current.model = None

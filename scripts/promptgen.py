@@ -89,6 +89,7 @@ def model_selection_changed(model_name):
 def generate(id_task, model_name, batch_count, batch_size, text, *args):
     shared.state.textinfo = "Loading model..."
     shared.state.job_count = batch_count
+    model_name = 'qwopqwop/danbooru-llama-gptq'
 
     if current.name != model_name:
         current.tokenizer = None

@@ -4,8 +4,8 @@ import time
 
 import torch
 import transformers
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from peft import PeftModel
+from transformers import AutoTokenizer
+from auto_gptq import AutoGPTQForCausalLM
 
 from modules import shared, generation_parameters_copypaste
 
@@ -97,14 +97,7 @@ def generate(id_task, model_name, batch_count, batch_size, text, *args):
         current.name = None
 
         if model_name != 'None':
-            model = AutoModelForCausalLM.from_pretrained("pinkmanlove/llama-7b-hf", device_map={"":0})
-            
-            model = PeftModel.from_pretrained(model, 'qwopqwop/danbooru-llama-qlora')
-            model = model.merge_and_unload()
-            
-            model.eval()
-            model.bfloat16()
-            model.config.use_cache = True  # silence the warnings. Please re-enable for inference!
+            model = AutoGPTQForCausalLM.from_quantized("qwopqwop/danbooru-llama-gptq")
             current.model = model
 
             DEFAULT_PAD_TOKEN = "[PAD]"
